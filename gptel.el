@@ -398,7 +398,7 @@ The current options for ChatGPT are
 - \"gpt-3.5-turbo-16k\"
 - \"gpt-4\" (experimental)
 - \"gpt-4-1106-preview\" (experimental)
- 
+
 To set the model for a chat session interactively call
 `gptel-send' with a prefix argument."
   :safe #'always
@@ -530,6 +530,19 @@ and \"apikey\" as USER."
                    (symbol-value key-sym))
                 (error "`gptel-api-key' is not valid")))
       (t (error "`gptel-api-key' is not valid")))))
+
+(defun gptel--expand-org-includes (input-string)
+  "Expand #+INCLUDE: directives in INPUT-STRING if in org-mode context."
+  ;; Assume org-mode context because the function might be called
+  ;; without an actual buffer being in org-mode.
+  (with-temp-buffer
+    (insert input-string)
+    (org-mode)
+    (goto-char (point-min))
+    (while (re-search-forward "^#\\+INCLUDE:.*$" nil t)
+      (beginning-of-line)
+      (org-export-expand-include-keyword))
+    (buffer-string)))
 
 (defsubst gptel--numberize (val)
   "Ensure VAL is a number."

@@ -38,6 +38,7 @@
 (defvar json-object-type)
 
 (declare-function gptel--get-api-key "gptel")
+(declare-function gptel--expand-org-includes "gptel")
 (declare-function prop-match-value "text-property-search")
 (declare-function text-property-search-backward "text-property-search")
 (declare-function json-read "json")
@@ -120,16 +121,20 @@
                         (when (get-char-property (max (point-min) (1- (point)))
                                                  'gptel)
                           t))))
-      (push (list :role (if (prop-match-value prop) "assistant" "user")
-                  :content
-                  (string-trim
-                   (buffer-substring-no-properties (prop-match-beginning prop)
-                                                   (prop-match-end prop))
-                   (format "[\t\r\n ]*\\(?:%s\\)?[\t\r\n ]*"
-                           (regexp-quote (gptel-prompt-prefix-string)))
-                   (format "[\t\r\n ]*\\(?:%s\\)?[\t\r\n ]*"
-                           (regexp-quote (gptel-response-prefix-string)))))
-            prompts)
+      (let* ((content (buffer-substring-no-properties (prop-match-beginning prop)
+                                                      (prop-match-end prop)))
+             (expanded-content (if (eq major-mode 'org-mode)
+                                   (gptel--expand-org-includes content)
+                                 content)))
+        (push (list :role (if (prop-match-value prop) "assistant" "user")
+                    :content
+                    (string-trim
+                     expanded-content
+                     (format "[\t\r\n ]*\\(?:%s\\)?[\t\r\n ]*"
+                             (regexp-quote (gptel-prompt-prefix-string)))
+                     (format "[\t\r\n ]*\\(?:%s\\)?[\t\r\n ]*"
+                             (regexp-quote (gptel-response-prefix-string)))))
+              prompts))
       (and max-entries (cl-decf max-entries)))
     (cons (list :role "system"
                 :content gptel--system-message)
